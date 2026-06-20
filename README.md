@@ -1,14 +1,16 @@
 # Refining Margin Optimizer
 
-Outil simple d'optimisation de la marge de raffinage, développé en Python avec Streamlit.
+A simple refining margin optimization tool, built in Python with Streamlit.
 
-Projet personnel réalisé dans le cadre d'une candidature chez Varo Energy.
+Personal project created for a job application at Varo Energy.
 
-## Lancer en local
+## Run locally
+
+Install the dependencies, then launch the app:
 
     py -m pip install -r requirements.txt
     py -m streamlit run app.py
 
-## Application en ligne
+## Live app
 
-Lien Streamlit Cloud : (à venir)
+Streamlit Cloud link: (coming soon)
