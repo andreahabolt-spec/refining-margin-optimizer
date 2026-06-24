@@ -50,7 +50,7 @@ crude_data = [
     {"Crude": "Qua Iboe",       "Region": "West Africa", "Quality": "Light sweet", "API": 36.0, "Sulphur_%": 0.12, "Diff_vs_Brent": 1.10,  "Freight": 1.85, "Cargo_Insurance": 0.10, "Port_Handling": 0.35, "Processing_cost": 2.5, "Note": "Nigerian light sweet - extra West African optionality"},
     {"Crude": "Dalia",          "Region": "West Africa", "Quality": "Medium sweet","API": 23.5, "Sulphur_%": 0.55, "Diff_vs_Brent": -1.50, "Freight": 2.10, "Cargo_Insurance": 0.12, "Port_Handling": 0.38, "Processing_cost": 3.5, "Note": "Angolan, heavier - West African supply not homogeneous"},
     {"Crude": "Oman",           "Region": "Middle East", "Quality": "Medium sour", "API": 33.5, "Sulphur_%": 1.20, "Diff_vs_Brent": -1.00, "Freight": 3.30, "Cargo_Insurance": 0.18, "Port_Handling": 0.40, "Processing_cost": 3.8, "Note": "Dubai-Oman linked - Middle East / Asian flow"},
-    {"Crude": "Cold Lake Blend", "Region": "Canada",      "Quality": "Heavy sour",  "API": 21.0, "Sulphur_%": 3.70, "Diff_vs_Brent": -13.00,"Freight": 2.60, "Cargo_Insurance": 0.10, "Port_Handling": 0.40, "Processing_cost": 6.5, "Note": "Canadian heavy sour (dilbit) - deep discount, high processing cost"},
+    {"Crude": "Cold Lake Blend", "Region": "Canada",      "Quality": "Heavy sour",  "API": 21.0, "Sulphur_%": 3.70, "Diff_vs_Brent": -13.00,"Freight": 2.60, "Cargo_Insurance": 0.10, "Port_Handling": 0.40, "Processing_cost": 6.5, "Note": "Canadian heavy sour crude used to test heavy crude economics, high sulphur, lower light-product yield and higher processing cost"},
 ]
 crudes = pd.DataFrame(crude_data)
 yield_data = [
@@ -71,6 +71,7 @@ yield_data = [
 ]
 crudes = crudes.merge(pd.DataFrame(yield_data), on="Crude")
 CRUDE_NAMES = list(crudes["Crude"])
+RESTRICTED_CRUDES = ["Urals"]   # sanctions-risk; excluded from the default recommendation
 
 if "shocks" not in st.session_state:
     st.session_state.shocks = []   # list of {target, brent, freight, insurance, diff}
@@ -96,6 +97,11 @@ PRICES = {"Diesel": price_diesel, "Jet": price_jet, "Gasoline": price_gasoline,
 
 st.sidebar.subheader("3. Crude selection mode")
 mode = st.sidebar.radio("Mode", ["Model recommendation", "Manual crude selection"])
+include_restricted = st.sidebar.checkbox(
+    "Include restricted / sanctions-risk crudes in recommendation", value=False)
+st.sidebar.caption("Urals is included for sanctions-risk and replacement-barrel analysis. "
+                   "It is excluded from the default recommendation unless restricted crudes "
+                   "are explicitly enabled.")
 selected_crude = None
 if mode == "Manual crude selection":
     selected_crude = st.sidebar.selectbox("Select a crude to test", CRUDE_NAMES)
@@ -127,7 +133,10 @@ def compute_table(df, shocks, prices, brent):
     return df
 
 ranked = compute_table(crudes, st.session_state.shocks, PRICES, BRENT)
-recommended = ranked.iloc[0]
+# Restricted crudes (e.g. Urals) stay in the ranking, table and quality map, but are
+# excluded from the automatic recommendation unless the user enables them.
+eligible = ranked if include_restricted else ranked[~ranked["Crude"].isin(RESTRICTED_CRUDES)]
+recommended = eligible.iloc[0]
 rec_crude = recommended["Crude"]
 if selected_crude is None:
     selected_crude = rec_crude            # model mode focuses on the recommended crude
@@ -226,15 +235,17 @@ st.dataframe(
 # ===========================================================================
 st.header("6. Product slate output")
 st.caption(f"From {volume_bbl:,.0f} bbl of {selected_crude}, estimated product output:")
+output_bbl = {k: sel[YIELD_COL[k]] / 100 * volume_bbl for k in PROD_KEYS}
 slate = pd.DataFrame({
     "Product": [PROD_LABEL[k] for k in PROD_KEYS],
     "Yield %": [sel[YIELD_COL[k]] for k in PROD_KEYS],
-    "Output bbl": [round(sel[YIELD_COL[k]] / 100 * volume_bbl, 0) for k in PROD_KEYS],
+    "Output bbl": [round(output_bbl[k], 0) for k in PROD_KEYS],
     "Price $/bbl": [PRICES[k] for k in PROD_KEYS],
+    "Product value $": [round(output_bbl[k] * PRICES[k], 0) for k in PROD_KEYS],
 })
 c_slate = st.columns([2, 1])
 c_slate[0].dataframe(slate, use_container_width=True, hide_index=True)
-c_slate[1].bar_chart(slate.set_index("Product")["Output bbl"])
+c_slate[1].bar_chart(slate.set_index("Product")["Product value $"])
 
 # ===========================================================================
 # 7. FINANCIAL RESULTS / MARGIN BREAKDOWN
@@ -249,10 +260,9 @@ fin = pd.DataFrame({
               f"{volume_bbl:,.0f} bbl", f"${gross_margin_total:,.0f}"],
 })
 st.dataframe(fin, use_container_width=True, hide_index=True)
-st.caption(f"Margin build-up for {selected_crude} ($/bbl):")
-st.bar_chart(pd.Series({"GPW": sel["GPW"], "Delivered cost": -sel["Delivered_Cost"],
-                        "Processing cost": -sel["Processing_cost"],
-                        "Refining margin": sel["Refining_Margin"]}))
+st.write(f"**Interpretation:** {selected_crude} generates a refining margin of "
+         f"{sel['Refining_Margin']:.2f} $/bbl, equal to an estimated gross margin of "
+         f"${gross_margin_total:,.0f} on {volume_bbl:,.0f} barrels processed.")
 
 # ===========================================================================
 # 8. CRUDE QUALITY MAP
