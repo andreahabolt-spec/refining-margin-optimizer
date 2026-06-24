@@ -99,9 +99,9 @@ st.sidebar.subheader("3. Crude selection mode")
 mode = st.sidebar.radio("Mode", ["Model recommendation", "Manual crude selection"])
 include_restricted = st.sidebar.checkbox(
     "Include restricted / sanctions-risk crudes in recommendation", value=False)
-st.sidebar.caption("Urals is available in the model for sanction-risk and replacement-barrel analysis. "
-                   "However, it is excluded from the default recommendation because it is not treated as a normal unconstrained procurement option. "
-                   "Enable it only for stress-test scenarios where sanctions waivers could make Russian crude economically relevant. ")
+st.sidebar.caption("Urals is included for sanctions-risk and replacement-barrel analysis. "
+                   "It is excluded from the default recommendation unless restricted crudes "
+                   "are explicitly enabled.")
 selected_crude = None
 if mode == "Manual crude selection":
     selected_crude = st.sidebar.selectbox("Select a crude to test", CRUDE_NAMES)
@@ -128,6 +128,10 @@ def compute_table(df, shocks, prices, brent):
     df["Delivered_Cost"] = df["FOB_Price"] + df["Freight_adj"] + df["Insurance_adj"] + df["Port_Handling"]
     df["GPW"] = sum(df[YIELD_COL[k]] / 100 * prices[k] for k in PROD_KEYS)
     df["Refining_Margin"] = df["GPW"] - df["Delivered_Cost"] - df["Processing_cost"]
+    # Netback / break-even FOB: the highest FOB crude price you could pay and still break even
+    # (margin = 0) = product worth minus processing, freight, insurance and port costs.
+    df["Breakeven_FOB"] = (df["GPW"] - df["Processing_cost"]
+                           - df["Freight_adj"] - df["Insurance_adj"] - df["Port_Handling"])
     df = df.sort_values("Refining_Margin", ascending=False).reset_index(drop=True)
     df["Rank"] = df.index + 1
     return df
@@ -224,11 +228,15 @@ st.subheader("Full crude ranking ($/bbl)")
 st.bar_chart(ranked.set_index("Crude")["Refining_Margin"])
 st.dataframe(
     ranked[["Rank", "Crude", "Region", "Quality", "API", "Sulphur_%", "Delivered_Cost",
-            "GPW", "Processing_cost", "Refining_Margin"]]
+            "GPW", "Breakeven_FOB", "Processing_cost", "Refining_Margin"]]
     .rename(columns={"Sulphur_%": "Sulphur", "Delivered_Cost": "Delivered $/bbl",
-                     "GPW": "GPW $/bbl", "Processing_cost": "Processing $/bbl",
+                     "GPW": "GPW $/bbl", "Breakeven_FOB": "Break-even FOB $/bbl",
+                     "Processing_cost": "Processing $/bbl",
                      "Refining_Margin": "Margin $/bbl"}).round(2),
     use_container_width=True, hide_index=True)
+st.caption("Break-even FOB (netback) = the highest FOB price you could pay for the crude and "
+           "still break even - product worth minus processing, freight, insurance and port. "
+           "The wider the gap between break-even FOB and the actual FOB price, the more margin.")
 
 # ===========================================================================
 # 6. PRODUCT SLATE OUTPUT (for the selected / recommended crude)
@@ -265,9 +273,100 @@ st.write(f"**Interpretation:** {selected_crude} generates a refining margin of "
          f"${gross_margin_total:,.0f} on {volume_bbl:,.0f} barrels processed.")
 
 # ===========================================================================
-# 8. CRUDE QUALITY MAP
+# 8. CRUDE SLATE OPTIMISATION (LINEAR PROGRAM)
 # ===========================================================================
-st.header("8. Crude quality map")
+st.header("8. Crude slate optimisation (linear program)")
+st.caption("The ranking above picks the single best grade. In practice a refinery buys a *slate* "
+           "of several crudes. This linear program chooses how many barrels of each crude to buy "
+           "to maximise total refining margin, subject to three physical limits: refinery "
+           "throughput, the availability of each crude, and a maximum average sulphur (product "
+           "spec). Margins already include any active shocks; restricted crudes follow the sidebar "
+           "setting.")
+
+lp_pool = (ranked if include_restricted
+           else ranked[~ranked["Crude"].isin(RESTRICTED_CRUDES)]).reset_index(drop=True)
+
+lp_c = st.columns(2)
+throughput = lp_c[0].number_input("Refinery throughput to fill (bbl)",
+                                  min_value=0, value=1_000_000, step=100_000)
+max_sulphur = lp_c[1].slider("Maximum average sulphur of the slate (%)",
+                             0.1, float(round(lp_pool["Sulphur_%"].max(), 2)), 1.00, 0.05)
+
+st.caption("Availability = the most barrels you could realistically source of each crude (editable).")
+avail = st.data_editor(
+    pd.DataFrame({"Crude": lp_pool["Crude"], "Available bbl": [200_000.0] * len(lp_pool)}),
+    use_container_width=True, hide_index=True, disabled=["Crude"],
+    column_config={"Available bbl": st.column_config.NumberColumn(
+        "Available bbl", min_value=0.0, step=50_000.0)})
+
+if st.button("Optimise crude slate"):
+    try:
+        import pulp
+    except ModuleNotFoundError:
+        st.error("This module needs the 'pulp' package. Install it with:  py -m pip install pulp")
+    else:
+        names = list(lp_pool["Crude"])
+        margin = dict(zip(names, lp_pool["Refining_Margin"]))
+        sulph = dict(zip(names, lp_pool["Sulphur_%"]))
+        cap = dict(zip(avail["Crude"], avail["Available bbl"]))
+
+        prob = pulp.LpProblem("crude_slate", pulp.LpMaximize)
+        x = {c: pulp.LpVariable(f"bbl_{i}", lowBound=0) for i, c in enumerate(names)}
+        prob += pulp.lpSum(margin[c] * x[c] for c in names)                        # objective
+        prob += pulp.lpSum(x[c] for c in names) == throughput, "throughput"        # fill the plant
+        for c in names:
+            prob += x[c] <= float(cap.get(c, 0.0)), f"avail_{c}"                   # availability
+        prob += pulp.lpSum(sulph[c] * x[c] for c in names) <= max_sulphur * throughput, "sulphur"
+        prob.solve(pulp.PULP_CBC_CMD(msg=0))
+
+        if pulp.LpStatus[prob.status] != "Optimal":
+            st.warning(f"No feasible slate for these limits ({pulp.LpStatus[prob.status]}). "
+                       "Raise total availability or the sulphur cap, or lower throughput.")
+        else:
+            bought = sum(x[c].value() for c in names)
+            total_margin = sum(margin[c] * x[c].value() for c in names)
+            blended_sulphur = (sum(sulph[c] * x[c].value() for c in names) / bought
+                               if bought else 0.0)
+            avg_margin = total_margin / bought if bought else 0.0
+
+            alloc = pd.DataFrame({
+                "Crude": names,
+                "Barrels bought": [round(x[c].value(), 0) for c in names],
+                "% of slate": [round(x[c].value() / throughput * 100, 1) if throughput else 0.0
+                               for c in names],
+                "Margin $/bbl": [round(margin[c], 2) for c in names],
+                "Sulphur %": [round(sulph[c], 2) for c in names],
+                "Margin contribution $": [round(margin[c] * x[c].value(), 0) for c in names],
+            })
+            alloc = alloc[alloc["Barrels bought"] > 0].sort_values("Barrels bought", ascending=False)
+
+            mcol = st.columns(3)
+            mcol[0].metric("Total slate margin", f"${total_margin:,.0f}")
+            mcol[1].metric("Average margin", f"${avg_margin:.2f}/bbl")
+            mcol[2].metric("Blended sulphur", f"{blended_sulphur:.2f}% / {max_sulphur:.2f}% cap")
+            st.dataframe(alloc, use_container_width=True, hide_index=True)
+
+            binding = ["throughput (the plant is filled exactly)"]
+            if abs(blended_sulphur - max_sulphur) < 1e-3:
+                binding.append("maximum average sulphur (product spec)")
+            at_cap = [c for c in names
+                      if x[c].value() > 1e-6 and abs(x[c].value() - float(cap.get(c, 0.0))) < 1e-3]
+            if at_cap:
+                binding.append("availability of " + ", ".join(at_cap))
+            st.info("**Binding constraints (what limits the margin):** " + "; ".join(binding)
+                    + ". Extra margin can only come from relaxing one of these.")
+            st.caption("Sweet/sour trade-off: when a sour crude is cheap (e.g. a discounted barrel "
+                       "or after a differential shock) it tops the margin ranking, but the sulphur "
+                       "cap then forces sweeter, costlier grades into the slate - trading some "
+                       "margin for spec compliance. Loosen the cap and the LP leans back on the "
+                       "cheaper sour grade.")
+else:
+    st.caption("Set the limits, edit availability if needed, then click 'Optimise crude slate'.")
+
+# ===========================================================================
+# 9. CRUDE QUALITY MAP
+# ===========================================================================
+st.header("9. Crude quality map")
 st.caption("x = API (higher is lighter), y = sulphur (higher is sourer), colour = region, "
            "bubble size = refining margin. Light sweet, high-margin crudes sit bottom-right.")
 qmap = ranked.copy()
@@ -287,13 +386,13 @@ quality_chart = (
 st.altair_chart(quality_chart, use_container_width=True)
 
 # ===========================================================================
-# 9. DETAILED DATA & ASSUMPTIONS
+# 10. DETAILED DATA & ASSUMPTIONS
 # ===========================================================================
-st.header("9. Detailed data & assumptions")
+st.header("10. Detailed data & assumptions")
 with st.expander("Crude characteristics & delivered cost build-up"):
     st.dataframe(ranked[["Crude", "Region", "Quality", "API", "Sulphur_%", "Diff_vs_Brent",
                          "FOB_Price", "Freight_adj", "Insurance_adj", "Port_Handling",
-                         "Delivered_Cost", "Processing_cost", "Note"]].round(2),
+                         "Delivered_Cost", "Breakeven_FOB", "Processing_cost", "Note"]].round(2),
                  use_container_width=True, hide_index=True)
 with st.expander("Product yield assumptions & gross product worth"):
     st.dataframe(ranked[["Crude", "Quality"] + [YIELD_COL[k] for k in PROD_KEYS]
