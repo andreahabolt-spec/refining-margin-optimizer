@@ -99,9 +99,9 @@ st.sidebar.subheader("3. Crude selection mode")
 mode = st.sidebar.radio("Mode", ["Model recommendation", "Manual crude selection"])
 include_restricted = st.sidebar.checkbox(
     "Include restricted / sanctions-risk crudes in recommendation", value=False)
-st.sidebar.caption("Urals is included for sanctions-risk and replacement-barrel analysis. "
-                   "It is excluded from the default recommendation unless restricted crudes "
-                   "are explicitly enabled.")
+st.sidebar.caption("Urals is available in the model for sanction-risk and replacement-barrel analysis. "
+                   "However, it is excluded from the default recommendation because it is not treated as a normal unconstrained procurement option. "
+                   "Enable it only for stress-test scenarios where sanctions waivers could make Russian crude economically relevant. ")
 selected_crude = None
 if mode == "Manual crude selection":
     selected_crude = st.sidebar.selectbox("Select a crude to test", CRUDE_NAMES)
