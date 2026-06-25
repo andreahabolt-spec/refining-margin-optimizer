@@ -54,20 +54,20 @@ crude_data = [
 ]
 crudes = pd.DataFrame(crude_data)
 yield_data = [
-    {"Crude": "Ekofisk",        "Diesel_%": 33, "Jet_%": 12, "Gasoline_%": 22, "Naphtha_%": 12, "FuelOil_%": 18, "LPG_%": 3},
-    {"Crude": "Forties",        "Diesel_%": 32, "Jet_%": 11, "Gasoline_%": 21, "Naphtha_%": 11, "FuelOil_%": 22, "LPG_%": 3},
-    {"Crude": "Johan Sverdrup", "Diesel_%": 32, "Jet_%": 10, "Gasoline_%": 13, "Naphtha_%": 8,  "FuelOil_%": 35, "LPG_%": 2},
-    {"Crude": "WTI Midland",    "Diesel_%": 31, "Jet_%": 11, "Gasoline_%": 26, "Naphtha_%": 14, "FuelOil_%": 14, "LPG_%": 4},
-    {"Crude": "CPC Blend",      "Diesel_%": 28, "Jet_%": 10, "Gasoline_%": 24, "Naphtha_%": 16, "FuelOil_%": 18, "LPG_%": 4},
-    {"Crude": "Azeri Light",    "Diesel_%": 36, "Jet_%": 13, "Gasoline_%": 20, "Naphtha_%": 11, "FuelOil_%": 17, "LPG_%": 3},
-    {"Crude": "Arab Light",     "Diesel_%": 30, "Jet_%": 11, "Gasoline_%": 15, "Naphtha_%": 9,  "FuelOil_%": 33, "LPG_%": 2},
-    {"Crude": "Basrah Medium",  "Diesel_%": 29, "Jet_%": 9,  "Gasoline_%": 12, "Naphtha_%": 8,  "FuelOil_%": 40, "LPG_%": 2},
-    {"Crude": "Urals",          "Diesel_%": 30, "Jet_%": 10, "Gasoline_%": 18, "Naphtha_%": 9,  "FuelOil_%": 31, "LPG_%": 2},
-    {"Crude": "Bonny Light",    "Diesel_%": 34, "Jet_%": 13, "Gasoline_%": 22, "Naphtha_%": 12, "FuelOil_%": 16, "LPG_%": 3},
-    {"Crude": "Qua Iboe",       "Diesel_%": 34, "Jet_%": 13, "Gasoline_%": 23, "Naphtha_%": 12, "FuelOil_%": 15, "LPG_%": 3},
-    {"Crude": "Dalia",          "Diesel_%": 31, "Jet_%": 11, "Gasoline_%": 14, "Naphtha_%": 9,  "FuelOil_%": 33, "LPG_%": 2},
-    {"Crude": "Oman",           "Diesel_%": 31, "Jet_%": 11, "Gasoline_%": 17, "Naphtha_%": 10, "FuelOil_%": 29, "LPG_%": 2},
-    {"Crude": "Cold Lake Blend", "Diesel_%": 22, "Jet_%": 7,  "Gasoline_%": 9,  "Naphtha_%": 6,  "FuelOil_%": 55, "LPG_%": 1},
+    {"Crude": "Ekofisk",         "Diesel_%": 32, "Jet_%": 12, "Gasoline_%": 24, "Naphtha_%": 13, "FuelOil_%": 15, "LPG_%": 4},
+    {"Crude": "Forties",         "Diesel_%": 31, "Jet_%": 11, "Gasoline_%": 22, "Naphtha_%": 12, "FuelOil_%": 21, "LPG_%": 3},
+    {"Crude": "Johan Sverdrup",  "Diesel_%": 31, "Jet_%": 10, "Gasoline_%": 15, "Naphtha_%": 9,  "FuelOil_%": 33, "LPG_%": 2},
+    {"Crude": "WTI Midland",     "Diesel_%": 28, "Jet_%": 10, "Gasoline_%": 29, "Naphtha_%": 17, "FuelOil_%": 11, "LPG_%": 5},
+    {"Crude": "CPC Blend",       "Diesel_%": 28, "Jet_%": 10, "Gasoline_%": 24, "Naphtha_%": 16, "FuelOil_%": 18, "LPG_%": 4},
+    {"Crude": "Azeri Light",     "Diesel_%": 33, "Jet_%": 13, "Gasoline_%": 22, "Naphtha_%": 13, "FuelOil_%": 16, "LPG_%": 3},
+    {"Crude": "Arab Light",      "Diesel_%": 29, "Jet_%": 10, "Gasoline_%": 17, "Naphtha_%": 10, "FuelOil_%": 32, "LPG_%": 2},
+    {"Crude": "Basrah Medium",   "Diesel_%": 28, "Jet_%": 8,  "Gasoline_%": 13, "Naphtha_%": 8,  "FuelOil_%": 40, "LPG_%": 3},
+    {"Crude": "Urals",           "Diesel_%": 30, "Jet_%": 9,  "Gasoline_%": 17, "Naphtha_%": 9,  "FuelOil_%": 33, "LPG_%": 2},
+    {"Crude": "Bonny Light",     "Diesel_%": 31, "Jet_%": 12, "Gasoline_%": 25, "Naphtha_%": 15, "FuelOil_%": 13, "LPG_%": 4},
+    {"Crude": "Qua Iboe",        "Diesel_%": 31, "Jet_%": 12, "Gasoline_%": 26, "Naphtha_%": 15, "FuelOil_%": 12, "LPG_%": 4},
+    {"Crude": "Dalia",           "Diesel_%": 29, "Jet_%": 9,  "Gasoline_%": 14, "Naphtha_%": 9,  "FuelOil_%": 37, "LPG_%": 2},
+    {"Crude": "Oman",            "Diesel_%": 30, "Jet_%": 10, "Gasoline_%": 17, "Naphtha_%": 10, "FuelOil_%": 31, "LPG_%": 2},
+    {"Crude": "Cold Lake Blend", "Diesel_%": 20, "Jet_%": 5,  "Gasoline_%": 8,  "Naphtha_%": 5,  "FuelOil_%": 61, "LPG_%": 1},
 ]
 crudes = crudes.merge(pd.DataFrame(yield_data), on="Crude")   # master basket (all grades)
 RESTRICTED_CRUDES = ["Urals"]   # sanctions-risk; hidden entirely unless the user enables them
