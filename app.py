@@ -17,11 +17,36 @@ import altair as alt
 st.set_page_config(page_title="Rotterdam Crude Procurement & Product Slate Optimizer",
                    layout="wide")
 st.title("Rotterdam Crude Procurement & Product Slate Optimizer")
-st.caption("Compare crude grades for a North-West Europe refinery by delivered cost, "
-           "product value and refining margin - then test your own pick against the model's.")
-st.caption("This version values all refined products at market prices to estimate Gross Product "
-           "Worth. Detailed inventory management and stock roll-forward are outside the scope of "
-           "this decision tool.")
+
+# ---- "Start here" purpose + how-to-use box -------------------------------
+st.info(
+    "**What this tool does** ? it helps a Rotterdam (North-West Europe) refinery decide "
+    "**which crude grade(s) to buy** to maximise refining margin under today's prices, freight, "
+    "insurance and supply risks.\n\n"
+    "**How to use it** ? (1) set your market view in the sidebar (Brent, refined product prices, volume); "
+"(2) read the **Executive summary** for the recommended grade; " 
+"(3) check the **Financial results / margin breakdown** (Section 7) ;"
+"(4) stress-test it with **market shocks** (Section 2); "
+"(5) if you want to challenge the model recommendation, select **Manual crude selection** in the sidebar to compare the recommended crude with your own selected crude (Section 5); "
+"(6) build the optimal multi-crude blend in **Crude slate optimisation** (Section 8); "
+"(7) use **Crude quality map** (Section 9) to visually understand crude quality, sulphur level and margin; " 
+"(8) use **Detailed data & assumptions** (Section 10) to check the assumptions, inputs and calculations behind the results.")
+st.caption("Scope: all refined products are valued at market prices to estimate Gross Product "
+           "Worth. Inventory management and stock roll-forward are outside the scope of this tool.")
+
+with st.expander("New to the terms? 60-second glossary"):
+    st.markdown(
+        "- **Delivered cost** - all-in cost of one barrel landed at the refinery: crude price "
+        "(Brent + differential) + freight + cargo insurance + port/handling.\n"
+        "- **Gross Product Worth (GPW)** - the market value of everything one barrel yields "
+        "(each product's yield % x its selling price).\n"
+        "- **Refining margin** - GPW - delivered crude cost - processing cost. The profit per "
+        "barrel; this is what the model ranks crudes on.\n"
+        "- **Break-even FOB (netback)** - the highest crude price you could pay and still break "
+        "even. The wider the gap to the actual price, the more margin.\n"
+        "- **Crude slate** - the mix of several crudes a refinery actually buys and blends.\n"
+        "- **Sweet/sour, light/heavy** - low-sulphur 'sweet' and high-API 'light' crudes are "
+        "easier and cheaper to refine; 'sour' / 'heavy' grades cost more to process.")
 
 # ---------------------------------------------------------------------------
 # Products
@@ -54,20 +79,20 @@ crude_data = [
 ]
 crudes = pd.DataFrame(crude_data)
 yield_data = [
-    {"Crude": "Ekofisk",         "Diesel_%": 32, "Jet_%": 12, "Gasoline_%": 24, "Naphtha_%": 13, "FuelOil_%": 15, "LPG_%": 4},
-    {"Crude": "Forties",         "Diesel_%": 31, "Jet_%": 11, "Gasoline_%": 22, "Naphtha_%": 12, "FuelOil_%": 21, "LPG_%": 3},
-    {"Crude": "Johan Sverdrup",  "Diesel_%": 31, "Jet_%": 10, "Gasoline_%": 15, "Naphtha_%": 9,  "FuelOil_%": 33, "LPG_%": 2},
-    {"Crude": "WTI Midland",     "Diesel_%": 28, "Jet_%": 10, "Gasoline_%": 29, "Naphtha_%": 17, "FuelOil_%": 11, "LPG_%": 5},
-    {"Crude": "CPC Blend",       "Diesel_%": 28, "Jet_%": 10, "Gasoline_%": 24, "Naphtha_%": 16, "FuelOil_%": 18, "LPG_%": 4},
-    {"Crude": "Azeri Light",     "Diesel_%": 33, "Jet_%": 13, "Gasoline_%": 22, "Naphtha_%": 13, "FuelOil_%": 16, "LPG_%": 3},
-    {"Crude": "Arab Light",      "Diesel_%": 29, "Jet_%": 10, "Gasoline_%": 17, "Naphtha_%": 10, "FuelOil_%": 32, "LPG_%": 2},
-    {"Crude": "Basrah Medium",   "Diesel_%": 28, "Jet_%": 8,  "Gasoline_%": 13, "Naphtha_%": 8,  "FuelOil_%": 40, "LPG_%": 3},
-    {"Crude": "Urals",           "Diesel_%": 30, "Jet_%": 9,  "Gasoline_%": 17, "Naphtha_%": 9,  "FuelOil_%": 33, "LPG_%": 2},
-    {"Crude": "Bonny Light",     "Diesel_%": 31, "Jet_%": 12, "Gasoline_%": 25, "Naphtha_%": 15, "FuelOil_%": 13, "LPG_%": 4},
-    {"Crude": "Qua Iboe",        "Diesel_%": 31, "Jet_%": 12, "Gasoline_%": 26, "Naphtha_%": 15, "FuelOil_%": 12, "LPG_%": 4},
-    {"Crude": "Dalia",           "Diesel_%": 29, "Jet_%": 9,  "Gasoline_%": 14, "Naphtha_%": 9,  "FuelOil_%": 37, "LPG_%": 2},
-    {"Crude": "Oman",            "Diesel_%": 30, "Jet_%": 10, "Gasoline_%": 17, "Naphtha_%": 10, "FuelOil_%": 31, "LPG_%": 2},
-    {"Crude": "Cold Lake Blend", "Diesel_%": 20, "Jet_%": 5,  "Gasoline_%": 8,  "Naphtha_%": 5,  "FuelOil_%": 61, "LPG_%": 1},
+    {"Crude": "Ekofisk",        "Diesel_%": 33, "Jet_%": 12, "Gasoline_%": 22, "Naphtha_%": 12, "FuelOil_%": 18, "LPG_%": 3},
+    {"Crude": "Forties",        "Diesel_%": 32, "Jet_%": 11, "Gasoline_%": 21, "Naphtha_%": 11, "FuelOil_%": 22, "LPG_%": 3},
+    {"Crude": "Johan Sverdrup", "Diesel_%": 32, "Jet_%": 10, "Gasoline_%": 13, "Naphtha_%": 8,  "FuelOil_%": 35, "LPG_%": 2},
+    {"Crude": "WTI Midland",    "Diesel_%": 31, "Jet_%": 11, "Gasoline_%": 26, "Naphtha_%": 14, "FuelOil_%": 14, "LPG_%": 4},
+    {"Crude": "CPC Blend",      "Diesel_%": 28, "Jet_%": 10, "Gasoline_%": 24, "Naphtha_%": 16, "FuelOil_%": 18, "LPG_%": 4},
+    {"Crude": "Azeri Light",    "Diesel_%": 36, "Jet_%": 13, "Gasoline_%": 20, "Naphtha_%": 11, "FuelOil_%": 17, "LPG_%": 3},
+    {"Crude": "Arab Light",     "Diesel_%": 30, "Jet_%": 11, "Gasoline_%": 15, "Naphtha_%": 9,  "FuelOil_%": 33, "LPG_%": 2},
+    {"Crude": "Basrah Medium",  "Diesel_%": 29, "Jet_%": 9,  "Gasoline_%": 12, "Naphtha_%": 8,  "FuelOil_%": 40, "LPG_%": 2},
+    {"Crude": "Urals",          "Diesel_%": 30, "Jet_%": 10, "Gasoline_%": 18, "Naphtha_%": 9,  "FuelOil_%": 31, "LPG_%": 2},
+    {"Crude": "Bonny Light",    "Diesel_%": 34, "Jet_%": 13, "Gasoline_%": 22, "Naphtha_%": 12, "FuelOil_%": 16, "LPG_%": 3},
+    {"Crude": "Qua Iboe",       "Diesel_%": 34, "Jet_%": 13, "Gasoline_%": 23, "Naphtha_%": 12, "FuelOil_%": 15, "LPG_%": 3},
+    {"Crude": "Dalia",          "Diesel_%": 31, "Jet_%": 11, "Gasoline_%": 14, "Naphtha_%": 9,  "FuelOil_%": 33, "LPG_%": 2},
+    {"Crude": "Oman",           "Diesel_%": 31, "Jet_%": 11, "Gasoline_%": 17, "Naphtha_%": 10, "FuelOil_%": 29, "LPG_%": 2},
+    {"Crude": "Cold Lake Blend", "Diesel_%": 22, "Jet_%": 7,  "Gasoline_%": 9,  "Naphtha_%": 6,  "FuelOil_%": 55, "LPG_%": 1},
 ]
 crudes = crudes.merge(pd.DataFrame(yield_data), on="Crude")   # master basket (all grades)
 RESTRICTED_CRUDES = ["Urals"]   # sanctions-risk; hidden entirely unless the user enables them
@@ -79,25 +104,39 @@ if "shocks" not in st.session_state:
 # SIDEBAR - market assumptions + crude selection mode
 # ===========================================================================
 st.sidebar.header("Controls")
+st.sidebar.caption("Set your market view here. Everything on the main page updates automatically.")
 
 with st.sidebar.expander("1. Market assumptions", expanded=True):
-    BRENT = st.slider("Brent benchmark ($/bbl)", 40.0, 120.0, 82.0, 0.5)
+    BRENT = st.slider("Brent benchmark ($/bbl)", 40.0, 120.0, 82.0, 0.5,
+                      help="Global benchmark crude price. Each grade is priced as Brent plus its "
+                           "own quality / location differential.")
     st.caption("Refined product selling prices ($/bbl) - user-defined market assumptions.")
-    price_diesel   = st.slider("Diesel / Gasoil",     50.0, 180.0, 105.0, 1.0)
-    price_jet      = st.slider("Jet / Kerosene",      50.0, 180.0, 102.0, 1.0)
-    price_gasoline = st.slider("Gasoline",            50.0, 180.0, 92.0,  1.0)
-    price_naphtha  = st.slider("Naphtha",             30.0, 150.0, 85.0,  1.0)
-    price_fueloil  = st.slider("Fuel Oil / Residue",  20.0, 130.0, 70.0,  1.0)
-    price_lpg      = st.slider("LPG",                 20.0, 130.0, 65.0,  1.0)
-    volume_bbl = st.number_input("Volume to process (bbl)", min_value=0, value=100000, step=10000)
+    price_diesel   = st.slider("Diesel / Gasoil",     50.0, 180.0, 105.0, 1.0,
+                               help="Assumed market selling price for this refined product.")
+    price_jet      = st.slider("Jet / Kerosene",      50.0, 180.0, 102.0, 1.0,
+                               help="Assumed market selling price for this refined product.")
+    price_gasoline = st.slider("Gasoline",            50.0, 180.0, 92.0,  1.0,
+                               help="Assumed market selling price for this refined product.")
+    price_naphtha  = st.slider("Naphtha",             30.0, 150.0, 85.0,  1.0,
+                               help="Assumed market selling price for this refined product.")
+    price_fueloil  = st.slider("Fuel Oil / Residue",  20.0, 130.0, 70.0,  1.0,
+                               help="Assumed market selling price for this refined product.")
+    price_lpg      = st.slider("LPG",                 20.0, 130.0, 65.0,  1.0,
+                               help="Assumed market selling price for this refined product.")
+    volume_bbl = st.number_input("Volume to process (bbl)", min_value=0, value=100000, step=10000,
+                                 help="Barrels of the single selected grade used in the Product "
+                                      "slate (Section 6) and Financial results (Section 7).")
 
 PRICES = {"Diesel": price_diesel, "Jet": price_jet, "Gasoline": price_gasoline,
           "Naphtha": price_naphtha, "FuelOil": price_fueloil, "LPG": price_lpg}
 
 st.sidebar.subheader("3. Crude selection mode")
-mode = st.sidebar.radio("Mode", ["Model recommendation", "Manual crude selection"])
+mode = st.sidebar.radio("Mode", ["Model recommendation", "Manual crude selection"],
+                        help="Model recommendation shows the best grade automatically. Manual lets "
+                             "you pick a grade and see what choosing it would cost vs the best.")
 include_restricted = st.sidebar.checkbox(
-    "Include restricted / sanctions-risk crudes in recommendation", value=False)
+    "Include restricted / sanctions-risk crudes in recommendation", value=False,
+    help="Off by default: sanctioned grades (Urals) are hidden everywhere. Turn on to include them.")
 st.sidebar.caption("Urals is hidden by default because it is treated as a restricted / "
                    "sanctions-risk crude. Enable restricted crudes to include it in rankings, "
                    "tables and optimization.")
@@ -112,7 +151,9 @@ CRUDE_NAMES = list(active_crudes["Crude"])
 
 selected_crude = None
 if mode == "Manual crude selection":
-    selected_crude = st.sidebar.selectbox("Select a crude to test", CRUDE_NAMES)
+    selected_crude = st.sidebar.selectbox("Select a crude to test", CRUDE_NAMES,
+                                          help="The grade whose economics you want to compare "
+                                               "against the model's recommended grade.")
 
 # ===========================================================================
 # CORE: delivered cost + margin per crude, with stacked shocks applied
@@ -158,20 +199,44 @@ opportunity_cost = sel["Refining_Margin"] - recommended["Refining_Margin"]   # <
 # 2. MANUAL MARKET SHOCK BUILDER
 # ===========================================================================
 st.header("2. Manual market shock builder")
-st.caption("Build one shock at a time and click Apply. Shocks stack: a shock on a single crude "
-           "adds to any 'All crudes' shock. Sliders move both ways, so positive and negative "
-           "shocks are both possible.")
-shock_target = st.selectbox("Apply shock to", ["All crudes"] + CRUDE_NAMES)
+st.caption("This section helps you test the model under changing market conditions. ")
+st.caption("You can simulate different shocks, such as a Brent price move, higher freight costs, higher cargo insurance, or a change in the crude differential. ")
+st.caption("After clicking **Apply shock**, the model updates the crude ranking and the recommended crude. You can apply several shocks one after another to build a full market scenario. ")
+
+# Seed the four adjustment sliders once so they can be reset to zero after each Apply.
+for _k, _v in [("shock_brent", 0.0), ("shock_freight", 0), ("shock_ins", 0), ("shock_diff", 0.0)]:
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
+
+def apply_shock():
+    """Append the current shock, then reset the four adjustment sliders to zero.
+    Runs as a button callback (before the widgets are re-created), so resetting the
+    widget values via session_state is allowed - this prevents the previous shock
+    values from being carried over and re-applied to the next crude."""
+    st.session_state.shocks.append({
+        "target": st.session_state.shock_target,
+        "brent": st.session_state.shock_brent,
+        "freight": st.session_state.shock_freight,
+        "insurance": st.session_state.shock_ins,
+        "diff": st.session_state.shock_diff,
+    })
+    st.session_state.shock_brent = 0.0
+    st.session_state.shock_freight = 0
+    st.session_state.shock_ins = 0
+    st.session_state.shock_diff = 0.0
+
+st.selectbox("Apply shock to", ["All crudes"] + CRUDE_NAMES, key="shock_target",
+             help="Apply the shock to every grade ('All crudes') or to one grade only.")
 sc = st.columns(4)
-shock_brent = sc[0].slider("Brent adjustment ($/bbl)", -30.0, 30.0, 0.0, 0.5)
-shock_freight = sc[1].slider("Freight adjustment (%)", -100, 300, 0, 5)
-shock_ins = sc[2].slider("Cargo insurance adjustment (%)", -100, 500, 0, 10)
-shock_diff = sc[3].slider("Crude differential adjustment ($/bbl)", -20.0, 20.0, 0.0, 0.5)
-if st.button("Apply shock"):
-    st.session_state.shocks.append({"target": shock_target, "brent": shock_brent,
-                                     "freight": shock_freight, "insurance": shock_ins,
-                                     "diff": shock_diff})
-    st.rerun()
+sc[0].slider("Brent adjustment ($/bbl)", -30.0, 30.0, step=0.5, key="shock_brent",
+             help="Move the Brent benchmark up or down (a market-wide price move).")
+sc[1].slider("Freight adjustment (%)", -100, 300, step=5, key="shock_freight",
+             help="Raise or lower freight cost, e.g. a shipping disruption.")
+sc[2].slider("Cargo insurance adjustment (%)", -100, 500, step=10, key="shock_ins",
+             help="Raise or lower cargo insurance, e.g. a war-risk premium.")
+sc[3].slider("Crude differential adjustment ($/bbl)", -20.0, 20.0, step=0.5, key="shock_diff",
+             help="Move the crude's differential to Brent, e.g. a discount on a sanctioned barrel.")
+st.button("Apply shock", on_click=apply_shock)
 
 st.caption("Active shock adjustments")
 if st.session_state.shocks:
@@ -195,41 +260,141 @@ else:
 # 4. EXECUTIVE SUMMARY
 # ===========================================================================
 st.header("4. Executive summary")
+st.caption("Your decision summary: which crude the model recommends buying now, the margin it generates per barrel "
+           "and the opportunity cost of choosing the crude you manually selected. Hover over each metric for a quick explanation.")
+
 k = st.columns(4)
-k[0].metric("Recommended crude", rec_crude, f"{recommended['Refining_Margin']:.2f} $/bbl")
-k[1].metric("Selected crude", selected_crude, f"{sel['Refining_Margin']:.2f} $/bbl")
-k[2].metric("Opportunity cost", f"{opportunity_cost:.2f} $/bbl")
-k[3].metric("Brent benchmark", f"${BRENT:.2f}")
+k[0].metric("Recommended crude", rec_crude, f"{recommended['Refining_Margin']:.2f} $/bbl",
+            help="The available grade with the highest refining margin per barrel.")
+k[1].metric("Selected crude", selected_crude, f"{sel['Refining_Margin']:.2f} $/bbl",
+            help="The grade you chose in the sidebar (defaults to the recommended one).")
+k[2].metric("Opportunity cost", f"{opportunity_cost:.2f} $/bbl",
+            help="Margin per barrel given up by buying the selected grade instead of the "
+                 "recommended one (0 if they are the same).")
+k[3].metric("Brent benchmark", f"${BRENT:.2f}", help="Your current Brent assumption from the sidebar.")
 k2 = st.columns(4)
-k2[0].metric("Selected delivered cost", f"${sel['Delivered_Cost']:.2f}/bbl")
-k2[1].metric("Selected GPW", f"${sel['GPW']:.2f}/bbl")
-k2[2].metric("Selected processing", f"${sel['Processing_cost']:.2f}/bbl")
-k2[3].metric("Selected rank", f"#{int(sel['Rank'])} of {len(ranked)}")
+k2[0].metric("Selected delivered cost", f"${sel['Delivered_Cost']:.2f}/bbl",
+             help="All-in landed cost of one barrel: FOB (Brent + differential) + freight + "
+                  "insurance + port/handling.")
+k2[1].metric("Selected GPW", f"${sel['GPW']:.2f}/bbl",
+             help="Gross Product Worth: market value of all products from one barrel.")
+k2[2].metric("Selected processing", f"${sel['Processing_cost']:.2f}/bbl",
+             help="Estimated cost to refine one barrel of this grade.")
+k2[3].metric("Selected rank", f"#{int(sel['Rank'])} of {len(ranked)}",
+             help="Where the selected grade ranks among the available grades by refining margin.")
 if mode == "Manual crude selection" and selected_crude != rec_crude:
     st.warning(f"{selected_crude} ranks #{int(sel['Rank'])} with {sel['Refining_Margin']:.2f} $/bbl. "
                f"The model recommends {rec_crude} at {recommended['Refining_Margin']:.2f} $/bbl - "
                f"an opportunity cost of {opportunity_cost:.2f} $/bbl by not buying the best grade.")
 else:
-    st.success(f"Showing the model's recommended crude: {rec_crude}.")
+    st.success(f"In plain terms: buy {rec_crude} - it earns the highest refining margin at "
+               f"{recommended['Refining_Margin']:.2f} $/bbl after all delivered and processing costs.")
 
 # ===========================================================================
-# 5. CRUDE SLATE OPTIMISATION (LINEAR PROGRAM) - core decision engine, moved up
+# 5. RECOMMENDED VS SELECTED CRUDE
 # ===========================================================================
-st.header("5. Crude slate optimisation (linear program)")
-st.caption("Core decision engine. The single-crude ranking below picks the best grade; in practice "
-           "a refinery buys a *slate* of several crudes. This linear program chooses how many "
-           "barrels of each crude to buy to maximise total refining margin, subject to three "
-           "physical limits: refinery throughput, the availability of each crude, and a maximum "
-           "average sulphur (product spec). Margins already include any active shocks; restricted "
-           "crudes follow the sidebar setting.")
+st.header("5. Recommended vs selected crude")
+st.caption("This section compares the model recommendation with the crude you selected. "
+           "The chart gives a quick visual ranking of all crudes by refining margin ($/bbl)."
+           "The table below provides the detailed breakdown behind the ranking: delivered cost, GPW, break-even FOB, processing cost and margin.")
+compare = pd.DataFrame({
+    "Metric": ["Region", "Quality", "Delivered cost $/bbl", "Gross product worth $/bbl",
+               "Processing cost $/bbl", "Refining margin $/bbl", "Rank"],
+    "Selected (" + selected_crude + ")": [
+        sel["Region"], sel["Quality"], round(sel["Delivered_Cost"], 2), round(sel["GPW"], 2),
+        round(sel["Processing_cost"], 2), round(sel["Refining_Margin"], 2), int(sel["Rank"])],
+    "Recommended (" + rec_crude + ")": [
+        recommended["Region"], recommended["Quality"], round(recommended["Delivered_Cost"], 2),
+        round(recommended["GPW"], 2), round(recommended["Processing_cost"], 2),
+        round(recommended["Refining_Margin"], 2), int(recommended["Rank"])],
+})
+st.dataframe(compare, use_container_width=True, hide_index=True)
+st.write(f"**Difference in margin:** {sel['Refining_Margin'] - recommended['Refining_Margin']:.2f} $/bbl   "
+         f"|   **Opportunity cost of the selected crude:** {opportunity_cost:.2f} $/bbl")
 
+st.subheader("Full crude ranking ($/bbl)")
+st.bar_chart(ranked.set_index("Crude")["Refining_Margin"])
+st.caption("How to read it ? A higher ranking means the crude is more profitable under today's "
+           "prices and costs. The table below adds the delivered cost, GPW and break-even FOB.")
+st.dataframe(
+    ranked[["Rank", "Crude", "Region", "Quality", "API", "Sulphur_%", "Delivered_Cost",
+            "GPW", "Breakeven_FOB", "Processing_cost", "Refining_Margin"]]
+    .rename(columns={"Sulphur_%": "Sulphur", "Delivered_Cost": "Delivered $/bbl",
+                     "GPW": "GPW $/bbl", "Breakeven_FOB": "Break-even FOB $/bbl",
+                     "Processing_cost": "Processing $/bbl",
+                     "Refining_Margin": "Margin $/bbl"}).round(2),
+    use_container_width=True, hide_index=True)
+
+# ===========================================================================
+# 6. PRODUCT SLATE OUTPUT (for the selected / recommended crude)
+# ===========================================================================
+st.header("6. Product slate output")
+st.caption("What one chosen crude turns into ? the barrels of each refined product and the value "
+           "each contributes. This is where the Gross Product Worth comes from.")
+st.caption(f"From {volume_bbl:,.0f} bbl of {selected_crude}, estimated product output:")
+output_bbl = {k: sel[YIELD_COL[k]] / 100 * volume_bbl for k in PROD_KEYS}
+slate = pd.DataFrame({
+    "Product": [PROD_LABEL[k] for k in PROD_KEYS],
+    "Yield %": [sel[YIELD_COL[k]] for k in PROD_KEYS],
+    "Output bbl": [round(output_bbl[k], 0) for k in PROD_KEYS],
+    "Price $/bbl": [PRICES[k] for k in PROD_KEYS],
+    "Product value $": [round(output_bbl[k] * PRICES[k], 0) for k in PROD_KEYS],
+})
+c_slate = st.columns([2, 1])
+c_slate[0].dataframe(slate, use_container_width=True, hide_index=True)
+c_slate[1].bar_chart(slate.set_index("Product")["Product value $"])
+
+# ===========================================================================
+# 7. FINANCIAL RESULTS / MARGIN BREAKDOWN
+# ===========================================================================
+st.header("7. Financial results / margin breakdown")
+st.caption("The margin maths for the chosen crude, from product worth down to the total gross "
+           "margin on your volume. Refining margin = GPW - delivered crude cost - processing cost.")
+gross_margin_total = sel["Refining_Margin"] * volume_bbl
+fin = pd.DataFrame({
+    "Item": ["Gross product worth", "Delivered crude cost", "Processing cost",
+             "Refining margin", "Volume processed", "Estimated gross margin"],
+    "Value": [f"${sel['GPW']:.2f}/bbl", f"-${sel['Delivered_Cost']:.2f}/bbl",
+              f"-${sel['Processing_cost']:.2f}/bbl", f"${sel['Refining_Margin']:.2f}/bbl",
+              f"{volume_bbl:,.0f} bbl", f"${gross_margin_total:,.0f}"],
+})
+st.dataframe(fin, use_container_width=True, hide_index=True)
+st.write(f"**Interpretation:** {selected_crude} generates a refining margin of "
+         f"{sel['Refining_Margin']:.2f} $/bbl, equal to an estimated gross margin of "
+         f"${gross_margin_total:,.0f} on {volume_bbl:,.0f} barrels processed.")
+
+# ===========================================================================
+# 8. CRUDE SLATE OPTIMISATION (LINEAR PROGRAM)
+# ===========================================================================
+st.header("8. Crude slate optimisation (linear program)")
+st.caption("""
+This section turns the crude ranking into a practical procurement decision.
+
+The ranking above shows the best crude on a **stand-alone basis**. But in reality, a refinery does not usually buy only one crude. It builds a **crude slate**, meaning a mix of several grades.
+
+The optimiser answers the key decision question:
+
+**Which combination of crudes should the refinery buy to maximise total margin?**
+
+The model selects the number of barrels for each crude while respecting three constraints:
+
+- total refinery throughput;
+- available volume for each crude;
+- maximum average sulphur allowed in the slate.
+
+Margins already include any active market shocks. Restricted crudes are automatically excluded based on the sidebar setting.
+""")
 lp_pool = ranked.reset_index(drop=True)   # ranked already reflects the restricted-crude filter
 
 lp_c = st.columns(2)
 throughput = lp_c[0].number_input("Refinery throughput to fill (bbl)",
-                                  min_value=0, value=1_000_000, step=100_000)
+                                  min_value=0, value=1_000_000, step=100_000,
+                                  help="Total barrels the refinery will run; the slate must fill "
+                                       "exactly this.")
 max_sulphur = lp_c[1].slider("Maximum average sulphur of the slate (%)",
-                             0.1, float(round(lp_pool["Sulphur_%"].max(), 2)), 1.00, 0.05)
+                             0.1, float(round(lp_pool["Sulphur_%"].max(), 2)), 1.00, 0.05,
+                             help="Product-spec limit on the blend's average sulphur. Lower it to "
+                                  "force in sweeter (lower-sulphur) grades.")
 
 st.caption("Availability = the most barrels you could realistically source of each crude (editable).")
 avail = st.data_editor(
@@ -279,10 +444,15 @@ if st.button("Optimise crude slate"):
             })
             alloc = alloc[alloc["Barrels bought"] > 0].sort_values("Barrels bought", ascending=False)
 
+            st.caption("This is the optimal slate to buy: how many barrels of each grade, the % of "
+                       "the blend, and each grade's margin contribution.")
             mcol = st.columns(3)
-            mcol[0].metric("Total slate margin", f"${total_margin:,.0f}")
-            mcol[1].metric("Average margin", f"${avg_margin:.2f}/bbl")
-            mcol[2].metric("Blended sulphur", f"{blended_sulphur:.2f}% / {max_sulphur:.2f}% cap")
+            mcol[0].metric("Total slate margin", f"${total_margin:,.0f}",
+                           help="Total refining margin across the whole purchased slate.")
+            mcol[1].metric("Average margin", f"${avg_margin:.2f}/bbl",
+                           help="Refining margin per barrel, averaged across the slate.")
+            mcol[2].metric("Blended sulphur", f"{blended_sulphur:.2f}% / {max_sulphur:.2f}% cap",
+                           help="Volume-weighted average sulphur of the chosen slate vs your cap.")
             st.dataframe(alloc, use_container_width=True, hide_index=True)
 
             binding = ["throughput (the plant is filled exactly)"]
@@ -303,78 +473,14 @@ else:
     st.caption("Set the limits, edit availability if needed, then click 'Optimise crude slate'.")
 
 # ===========================================================================
-# 6. RECOMMENDED VS SELECTED CRUDE
-# ===========================================================================
-st.header("6. Recommended vs selected crude")
-compare = pd.DataFrame({
-    "Metric": ["Region", "Quality", "Delivered cost $/bbl", "Gross product worth $/bbl",
-               "Processing cost $/bbl", "Refining margin $/bbl", "Rank"],
-    "Selected (" + selected_crude + ")": [
-        sel["Region"], sel["Quality"], round(sel["Delivered_Cost"], 2), round(sel["GPW"], 2),
-        round(sel["Processing_cost"], 2), round(sel["Refining_Margin"], 2), int(sel["Rank"])],
-    "Recommended (" + rec_crude + ")": [
-        recommended["Region"], recommended["Quality"], round(recommended["Delivered_Cost"], 2),
-        round(recommended["GPW"], 2), round(recommended["Processing_cost"], 2),
-        round(recommended["Refining_Margin"], 2), int(recommended["Rank"])],
-})
-st.dataframe(compare, use_container_width=True, hide_index=True)
-st.write(f"**Difference in margin:** {sel['Refining_Margin'] - recommended['Refining_Margin']:.2f} $/bbl   "
-         f"|   **Opportunity cost of the selected crude:** {opportunity_cost:.2f} $/bbl")
-
-st.subheader("Full crude ranking ($/bbl)")
-st.bar_chart(ranked.set_index("Crude")["Refining_Margin"])
-st.dataframe(
-    ranked[["Rank", "Crude", "Region", "Quality", "API", "Sulphur_%", "Delivered_Cost",
-            "GPW", "Breakeven_FOB", "Processing_cost", "Refining_Margin"]]
-    .rename(columns={"Sulphur_%": "Sulphur", "Delivered_Cost": "Delivered $/bbl",
-                     "GPW": "GPW $/bbl", "Breakeven_FOB": "Break-even FOB $/bbl",
-                     "Processing_cost": "Processing $/bbl",
-                     "Refining_Margin": "Margin $/bbl"}).round(2),
-    use_container_width=True, hide_index=True)
-st.caption("Break-even FOB (netback) = the highest FOB price you could pay for the crude and "
-           "still break even - product worth minus processing, freight, insurance and port. "
-           "The wider the gap between break-even FOB and the actual FOB price, the more margin.")
-
-# ===========================================================================
-# 7. PRODUCT SLATE OUTPUT (for the selected / recommended crude)
-# ===========================================================================
-st.header("7. Product slate output")
-st.caption(f"From {volume_bbl:,.0f} bbl of {selected_crude}, estimated product output:")
-output_bbl = {k: sel[YIELD_COL[k]] / 100 * volume_bbl for k in PROD_KEYS}
-slate = pd.DataFrame({
-    "Product": [PROD_LABEL[k] for k in PROD_KEYS],
-    "Yield %": [sel[YIELD_COL[k]] for k in PROD_KEYS],
-    "Output bbl": [round(output_bbl[k], 0) for k in PROD_KEYS],
-    "Price $/bbl": [PRICES[k] for k in PROD_KEYS],
-    "Product value $": [round(output_bbl[k] * PRICES[k], 0) for k in PROD_KEYS],
-})
-c_slate = st.columns([2, 1])
-c_slate[0].dataframe(slate, use_container_width=True, hide_index=True)
-c_slate[1].bar_chart(slate.set_index("Product")["Product value $"])
-
-# ===========================================================================
-# 8. FINANCIAL RESULTS / MARGIN BREAKDOWN
-# ===========================================================================
-st.header("8. Financial results / margin breakdown")
-gross_margin_total = sel["Refining_Margin"] * volume_bbl
-fin = pd.DataFrame({
-    "Item": ["Gross product worth", "Delivered crude cost", "Processing cost",
-             "Refining margin", "Volume processed", "Estimated gross margin"],
-    "Value": [f"${sel['GPW']:.2f}/bbl", f"-${sel['Delivered_Cost']:.2f}/bbl",
-              f"-${sel['Processing_cost']:.2f}/bbl", f"${sel['Refining_Margin']:.2f}/bbl",
-              f"{volume_bbl:,.0f} bbl", f"${gross_margin_total:,.0f}"],
-})
-st.dataframe(fin, use_container_width=True, hide_index=True)
-st.write(f"**Interpretation:** {selected_crude} generates a refining margin of "
-         f"{sel['Refining_Margin']:.2f} $/bbl, equal to an estimated gross margin of "
-         f"${gross_margin_total:,.0f} on {volume_bbl:,.0f} barrels processed.")
-
-# ===========================================================================
 # 9. CRUDE QUALITY MAP
 # ===========================================================================
 st.header("9. Crude quality map")
+st.caption("Where each crude sits on quality: light/sweet grades (bottom-right) are easier and "
+           "cheaper to refine; heavy/sour grades (top-left) cost more to process. Bigger bubble = "
+           "more refining margin.")
 st.caption("x = API (higher is lighter), y = sulphur (higher is sourer), colour = region, "
-           "bubble size = refining margin. Light sweet, high-margin crudes sit bottom-right.")
+           "bubble size = refining margin.")
 qmap = ranked.copy()
 qmap["Margin_size"] = qmap["Refining_Margin"].clip(lower=0.1)   # size must be positive
 quality_chart = (
@@ -395,6 +501,8 @@ st.altair_chart(quality_chart, use_container_width=True)
 # 10. DETAILED DATA & ASSUMPTIONS
 # ===========================================================================
 st.header("10. Detailed data & assumptions")
+st.caption("This section contains the data and assumptions behind the model results. "
+           "Open the expanders if you want to check the details, such as crude characteristics, product yields, prices or shock calculations.")
 with st.expander("Crude characteristics & delivered cost build-up"):
     st.dataframe(ranked[["Crude", "Region", "Quality", "API", "Sulphur_%", "Diff_vs_Brent",
                          "FOB_Price", "Freight_adj", "Insurance_adj", "Port_Handling",
