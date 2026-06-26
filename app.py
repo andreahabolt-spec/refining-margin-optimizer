@@ -20,10 +20,10 @@ st.title("Rotterdam Crude Procurement & Product Slate Optimizer")
 
 # ---- "Start here" purpose + how-to-use box -------------------------------
 st.info(
-    "**What this tool does:** it helps a Rotterdam (North-West Europe) refinery decide "
+    "**What this tool does ?** It helps a Rotterdam (North-West Europe) refinery decide "
     "**which crude grade(s) to buy** to maximise refining margin under today's prices, freight, "
     "insurance and supply risks.\n\n"
-    "**How to use it:**\n\n"
+    "**How to use it ?**\n\n"
     "1. Set your market view in the sidebar (Brent, refined product prices, volume).\n"
     "2. Read the **Executive summary** for the recommended grade.\n"
     "3. Check the **Financial results / margin breakdown** (Section 7).\n"
