@@ -20,17 +20,21 @@ st.title("Rotterdam Crude Procurement & Product Slate Optimizer")
 
 # ---- "Start here" purpose + how-to-use box -------------------------------
 st.info(
-    "**What this tool does** ? it helps a Rotterdam (North-West Europe) refinery decide "
+    "**What this tool does:** it helps a Rotterdam (North-West Europe) refinery decide "
     "**which crude grade(s) to buy** to maximise refining margin under today's prices, freight, "
     "insurance and supply risks.\n\n"
-    "**How to use it** ? (1) set your market view in the sidebar (Brent, refined product prices, volume); "
-"(2) read the **Executive summary** for the recommended grade; " 
-"(3) check the **Financial results / margin breakdown** (Section 7) ;"
-"(4) stress-test it with **market shocks** (Section 2); "
-"(5) if you want to challenge the model recommendation, select **Manual crude selection** in the sidebar to compare the recommended crude with your own selected crude (Section 5); "
-"(6) build the optimal multi-crude blend in **Crude slate optimisation** (Section 8); "
-"(7) use **Crude quality map** (Section 9) to visually understand crude quality, sulphur level and margin; " 
-"(8) use **Detailed data & assumptions** (Section 10) to check the assumptions, inputs and calculations behind the results.")
+    "**How to use it:**\n\n"
+    "1. Set your market view in the sidebar (Brent, refined product prices, volume).\n"
+    "2. Read the **Executive summary** for the recommended grade.\n"
+    "3. Check the **Financial results / margin breakdown** (Section 7).\n"
+    "4. Stress-test it with **market shocks** (Section 2).\n"
+    "5. If you want to challenge the model recommendation, select **Manual crude selection** in "
+    "the sidebar to compare the recommended crude with your own selected crude (Section 5).\n"
+    "6. Build the optimal multi-crude blend in **Crude slate optimisation** (Section 8).\n"
+    "7. Use the **Crude quality map** (Section 9) to visually understand crude quality, sulphur "
+    "level and margin.\n"
+    "8. Use **Detailed data & assumptions** (Section 10) to check the assumptions, inputs and "
+    "calculations behind the results.")
 st.caption("Scope: all refined products are valued at market prices to estimate Gross Product "
            "Worth. Inventory management and stock roll-forward are outside the scope of this tool.")
 
